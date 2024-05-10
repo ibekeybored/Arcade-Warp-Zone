@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 1</title>
+<style>
+    body {
+        color: #fff;
+        text-align: center;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+    canvas {
+        border: 2px solid black;
+        display: block;
+        margin: auto;
+        background-color: #62c0d3; 
+    }
+</style>
+</head>
+<body>
+<canvas id="introAnimationCanvas" width="900" height="542"></canvas>
+<audio id="backgroundMusic" autoplay loop>
+    <source src="audio/round_music.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+</audio>
+
+<script>
+    const canvas = document.getElementById('introAnimationCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const introSpritesheet = new Image();
+    introSpritesheet.src = 'images/dogSniffJump.png';
+
+    const logo = new Image();
+    logo.onload = () => {
+        logoX = (canvas.width - logo.width * logoScale) / 2;
+    };
+    logo.src = 'images/logo.png';
+
+    const background = new Image();
+    background.onload = () => {
+        console.log('Background image loaded successfully.');
+        gameLoop();
+    };
+    background.src = 'images/wallpaper.png';
+
+    const spriteWidth = 125;
+    const spriteHeight = 138;
+    const totalSprites = 8;
+    const firstLoopCount = 100;
+    let currentSprite = 0;
+    let frameCounter = 0;
+    let loopCounter = 0;
+
+    let logoX = 0; 
+    let logoY = 20;
+    let logoScale = 0.5;
+
+    let spriteX = canvas.width / 2 - spriteWidth / 2;
+    let spriteY = canvas.height / 2 - spriteHeight / 2 + 70; 
+
+    function startGame() {
+        window.location.href = 'game.html';
+    }
+
+    function drawText() {
+        const text = 'Start Game';
+        const fontSize = 40;
+        ctx.font = `bold ${fontSize}px Arial`;
+        const textWidth = ctx.measureText(text).width;
+        const textX = canvas.width / 2 - textWidth / 2;
+        const textY = canvas.height / 2 + 200;
+        ctx.fillStyle = '#fff';
+        ctx.fillText(text, textX, textY);
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(
+            introSpritesheet,
+            currentSprite * spriteWidth,
+            0,
+            spriteWidth,
+            spriteHeight,
+            spriteX, 
+            spriteY,
+            spriteWidth,
+            spriteHeight
+        );
+
+        ctx.drawImage(logo, logoX, logoY, logo.width * logoScale, logo.height * logoScale);
+
+        drawText();
+
+        frameCounter++;
+        if (frameCounter >= 30) {
+            frameCounter = 0;
+            currentSprite = (currentSprite + 1) % totalSprites;
+            if (currentSprite === 0) {
+                loopCounter++;
+                if (loopCounter >= firstLoopCount) {
+                    loopCounter = 0;
+                    currentSprite = 5;
+                }
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    function adjustLogoPosition(x, y) {
+        logoX += x;
+        logoY += y;
+    }
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'ArrowUp') {
+            adjustLogoPosition(0, -10);
+        } else if (event.key === 'ArrowDown') {
+            adjustLogoPosition(0, 10);
+        } else if (event.key === 'ArrowLeft') {
+            adjustLogoPosition(-10, 0);
+        } else if (event.key === 'ArrowRight') {
+            adjustLogoPosition(10, 0);
+        }
+    });
+
+    canvas.addEventListener('click', startGame);
+</script>
+</body>
+</html>

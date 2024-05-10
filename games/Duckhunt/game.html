@@ -1,0 +1,318 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Duck hunt</title>
+<script src="lib/easeljs-0.7.0.min.js"></script>
+<script>
+var canvas;
+var stage;
+var img;
+var bg;
+
+var score;
+var bmpList;
+var bitmap;
+var scoreTxt;
+var shotsTxt;
+
+var gameTxt;
+var mouseTarget;
+
+var theDuck;
+var shots;
+var deathTimer;
+
+var speedX;
+var speedY;
+
+function init(){
+    canvas = document.getElementById("canvas");
+    stage = new createjs.Stage(canvas);
+    score = 0;
+    shots =3;
+    speedX=[];
+    speedY=[];
+    speedX[0] = 6;
+    speedX[1] = 9;
+    speedX[2] = 12;
+    
+    speedY[0] = -6;
+    speedY[1] = -9;
+    speedY[2] = -12;
+    
+    
+    deathTimer =[];
+    isMovingUp=[];
+    
+    canvas.addEventListener("click", shotFiredEvent);
+    
+    var duck = new Image();
+    duck.src = "images/theDuck2.png";
+    duck.onload = createDucks;
+    
+    img = new Image();
+    img.src = "images/back2.png";
+    img.onload = setBG;
+
+    var test = new Image();
+    test.src = "images/largeTree.png";
+    test.onload = addTreeAndText;
+    
+    
+}
+
+function addTreeAndText(event)
+{
+    var image = event.target;
+    var bitmap;
+    var container = new createjs.Container();
+    stage.addChild(container);
+
+    bitmap = new createjs.Bitmap(image);
+    container.addChild(bitmap);
+    bitmap.x = 340;
+    bitmap.y = 415;
+    bitmap.regX = bitmap.image.width;
+    bitmap.regY = bitmap.image.height;
+    
+    scoreTxt = new createjs.Text("Score 0", "24px Arial", "#FFF");
+    scoreTxt.textBaseLine = "top";
+    scoreTxt.x = 755;
+    scoreTxt.y = 460;
+    container.addChild(scoreTxt);
+    
+    shotsTxt = new createjs.Text("Shots 3", "24px Arial", "#FFF");
+    shotsTxt.textBaseLine = "top";
+    shotsTxt.x = 120;
+    shotsTxt.y = 460;
+    container.addChild(shotsTxt);
+}
+
+function createDucks(event){
+    var container = new createjs.Container();
+    stage.addChild(container);
+    
+    var data = {
+        images: [event.target],
+        frames: {width: 74, height: 71},
+        animations: {"flyingTopLeft":[0,2, "flyingTopLeft", 0.5],
+                     "flyingLeft":[9,10, "flyingLeft", 0.5],
+                     "flyingTopRight":[3,5, "flyingTopRight", 0.5],
+                     "flyingRight":[6,8, "flyingRight", 0.5],
+                      "shot":[12],
+                      "die":[15,17]}
+    };
+    var spriteSheet = new createjs.SpriteSheet(data);
+    
+    var l = 3;
+    bmpList = [];
+    for(var i=0; i<l; i++){
+        theDuck = new createjs.Sprite(spriteSheet, "flyingTopRight");
+            
+        speedX[i] = (Math.random() * 24)%10 + 8;
+        speedY[i] = (Math.random() * 15)%8 + 6;
+        var clickable = new createjs.Shape();
+        clickable.graphics.beginFill("#000").drawRect(0,0,100,100);
+        theDuck.hitArea = clickable;
+        //theDuck.setTransform(170, 330, 1, 1);
+        theDuck.setTransform(170, 280-(i*40), 1, 1);
+        theDuck.framerate = 30;
+        container.addChild(theDuck);
+        theDuck.name = i;
+        theDuck.mouseEnabled = true;
+        theDuck.addEventListener("click", duckShotEvent); 
+        bmpList.push(theDuck);
+        isMovingUp[theDuck.name] = true;
+    }
+    
+    play = true;
+    createjs.Ticker.addEventListener("tick", handleTick);
+}
+
+
+function resetDuck(duck){
+    duck.stop();
+    duck.setTransform(170, 280-(duck.name*23), 1, 1);
+    speedY[duck.name] = (Math.random() * 24)%10 + 8;
+    speedX[duck.name] = (Math.random() * 15)%8 + 6;
+    duck.gotoAndPlay("flyingTopRight"); 
+    duck.addEventListener("click",duckShotEvent);
+}
+
+function setBG(event){
+    bg = new createjs.Bitmap(img);
+    stage.addChild(bg);
+    stage.addChild(text);
+    stage.update();
+}
+
+function duckShotEvent(evt) {
+    var gunshotAudio = new Audio("audio/gunshot.wav");
+    gunshotAudio.play();
+    speedX[evt.target.name] = 0;
+    speedY[evt.target.name] = 0;
+    evt.target.framerate = 30;
+    score += 50;
+    var xPos = evt.target.x;
+    var yPos = evt.target.y;
+
+    stage.update();
+    console.log("Shot fired, shots remaining:", shots); // Add this line
+}
+
+
+function duckDie(duck){
+    duck.gotoAndPlay("die");
+    speedY[duck.name] = 20;
+    stage.update();
+}
+
+function shotFiredEvent(evt) {
+    if (!evt.target.name.startsWith("duck")) {
+        shots -= 1;
+        console.log("Shot fired, shots remaining:", shots);
+    }
+}
+
+
+function shotFiredEvent(evt)
+{
+    shots-=1;    
+}
+
+function handleTick(event){
+    if(play == true){
+        var l = bmpList.length;
+        for(var i=0; i<l; i++){
+            var bmp = bmpList[i];
+            checkDirection(bmp);
+            bmp.x +=speedX[bmp.name];
+            bmp.y +=speedY[bmp.name];
+        }
+        
+        if(shots==0)
+        {
+            gameOver();    
+        }
+    }
+    scoreTxt.text =  score;
+    shotsTxt.text =  shots;
+    stage.update(event);
+}
+function checkAnimations(duck)
+{
+    if(speedX[duck.name]==0 && speedY[duck.name]==0 && duck.currentAnimation != "shot")
+    {
+        duck.stop();
+        duck.gotoAndPlay("shot");
+        duck.removeEventListener("click", duckShotEvent);
+        deathTimer[duck.name] = setTimeout(function() { duckDie(duck) }, 1000);
+        duck.x -= 5;
+    }
+    else if(speedY[duck.name] ==20)
+    {
+        duck.removeEventListener("click", duckShotEvent);
+    }
+    else if(speedX[duck.name]>0 && speedY[duck.name] <0 && duck.currentAnimation != "flyingTopRight")
+    {
+        duck.stop();
+        duck.gotoAndPlay("flyingTopRight");
+    }
+    else if( speedX[duck.name]<0 && speedY[duck.name] <0 && duck.currentAnimation != "flyingTopLeft")
+    {
+        duck.stop();
+        duck.gotoAndPlay("flyingTopLeft");
+    }
+    else if (speedX[duck.name]<0 && speedY[duck.name]>0 && duck.currentAnimation != "flyingLeft")
+    {
+        duck.stop();
+        duck.gotoAndPlay("flyingLeft");
+    }
+    else if (speedX[duck.name]>0 && speedY[duck.name]>0 && duck.currentAnimation != "flyingRight")
+    {
+        duck.stop();
+        duck.gotoAndPlay("flyingRight");
+    }
+}
+
+
+
+function checkDirection(duck)
+{
+    if(duck.x > canvas.width-90 && speedY[duck.name]!=20)
+    {
+        speedX[duck.name] *=-1;
+    }
+    else if(duck.x <0 && speedY[duck.name]!=20)
+    {
+        speedX[duck.name] *= -1;
+    }
+    
+    if(duck.y <0 && speedY[duck.name]!=20)
+    {
+        speedY[duck.name] *= -1;    
+    }
+    else if(duck.y >300 && speedY[duck.name]!=20)
+    {
+        speedY[duck.name] *=-1;    
+    }
+    checkAnimations(duck);
+}
+
+
+function gameOver(){
+    var gameOverAudio = new Audio("audio/gameover.mp3");
+    gameOverAudio.play();
+    gameTxt = new createjs.Text("Game Over\n\n", "36px Arial", "#666");
+    gameTxt.text += "Click to play again";
+    gameTxt.textAlign = "center";
+    gameTxt.x = canvas.width / 2;
+    gameTxt.y = canvas.height / 3;
+    stage.addChild(gameTxt);
+    play = false;
+    var l = bmpList.length;
+    for(var i=0; i<l; i++){
+        var bmp = bmpList[i];
+        clearTimeout(deathTimer[i]);
+    }
+    stage.update();
+    canvas.onclick = handleClick;
+}
+
+function handleClick(){
+    canvas.onclick = null;
+    stage.removeChild(gameTxt);
+    score = 0;    
+    shots = 3;
+    var l = bmpList.length;
+    for(var i=0; i<l; i++){
+        var bmp = bmpList[i];
+        resetDuck(bmp);
+    }
+    play = true;
+}
+</script>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        text-align: center;
+        background-color: #ffffff; 
+    }
+    canvas {
+        border: 2px solid;
+        background-color: #62c0d3; 
+        margin: auto;
+    }
+</style>
+</head>
+
+<body onLoad="init();">
+<canvas id="canvas" width="900" height="542"></canvas>
+<audio id="quackSound">
+  <source src="audio/gunshot.wav" type="audio/wav">
+  Your browser does not support the audio element.
+</audio>
+</body>
+</html>
